@@ -10,7 +10,7 @@ https://phapl.github.io/
 
 ## Offline
 
-(Download)[https://github.com/phapl/phapl.github.io/archive/master.zip] (~9 MB download, ~37 unpacked)
+[Download](https://github.com/phapl/phapl.github.io/archive/master.zip) (~9 MB download, ~37 unpacked)
 
 ## Licenses
 
