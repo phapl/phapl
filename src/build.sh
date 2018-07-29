@@ -19,6 +19,8 @@ mkdir -p site/lib || die "can't create site/lib/ folder"
 
 BASE=$(dirname "$0")
 
+echo "BASE=$BASE"
+
 
 # LZMA-JS
 
@@ -52,7 +54,7 @@ python "$BASE"/gen_html_tasks.py "$BASE"/tasks_mainpdf_kz16.txt "$BASE"/tasks_ma
 
 python "$BASE"/langtr.py json 'generated_js_part.{}.js' < generated_js_part.js && for l in ru en ; do lzma -9 < generated_js_part.$l.js > generated_js_part.$l.js.lzma && base64 generated_js_part.$l.js.lzma | perl -C0 -pe 's/\s+//' > generated_js_part.$l.js.lzma.base64 ; done
 
-(cd site && (cd ../ && python "$BASE"/gen_html_combine.py < "$BASE"/phapl_tpl.html) | python "$BASE"/langtr.py static '../phapl.{}.html' && (cd ../ && python "$BASE"/gen_html_combine2.py ru < phapl.ru.html) > phapl.ru.html && (cd ../ && python "$BASE"/gen_html_combine2.py en < phapl.en.html) > phapl.en.html)
+python "$BASE"/gen_html_combine.py < "$BASE"/phapl_tpl.html | python "$BASE"/langtr.py static 'phapl.{}.html' && python "$BASE"/gen_html_combine2.py ru < phapl.ru.html > site/phapl.ru.html && python "$BASE"/gen_html_combine2.py en < phapl.en.html > site/phapl.en.html || die 'phapl combine'
 
 # static html
 cp "$BASE"/index.html "$BASE"/phapl.html site/
