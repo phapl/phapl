@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- Generated html may include non-free tasks and be non-redistributable. -->
+<!-- phapl_tpl.html, template: -->
+<!-- Copyright © 2018 Aleksey Cherepanov <lyosha@openwall.com> -->
+<!-- Redistribution and use in source and binary forms, with or without modification, are permitted. -->
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>PhaPl: Phase Plane Helper</title>
+    <style>
+      body { font-size: 140%; }
+      input { width: 600px; }
+      .container { width: 90%; border: 1px solid black; padding: 10px; }
+    </style>
+
+    <script type="text/javascript" src="lib/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+          displayAlign: "left"
+      });
+    </script>
+
+    <script src="lib/lzma-d-min.js" type="text/javascript"></script>
+
+    <!-- shim for ES6 `Promise` builtin -->
+    <script src="lib/Promise.min.js" type="text/javascript"></script>
+    <!-- shim for off-main-thread function compilation -->
+    <script src="lib/FunctionPromise.js" type="text/javascript"></script>
+    <script src="lib/pypyjs.js" type="text/javascript"></script>
+
+    <!-- %% catch errors in javascript -->
+    <script type="text/javascript">
+
+      langtr_lang_index = [[0 | 1]];
+
+      phapl_cached_solutions = {};
+
+      phapl_start = 0;
+
+      function langtr_replace(s) {
+          return s.replace(/\[\[([^\x5d]*)\]\]/g, function (match, p1) {
+              return p1.split(' | ')[langtr_lang_index];
+          })
+      }
+
+      function scroll_to(id) {
+          document.getElementById(id).scrollIntoView({ "behaviour" : "smooth" });
+      }
+
+      function phapl_populate_cache(b64) {
+          var l = atob(b64);
+          var t = [];
+          for (var i = 0; i < l.length; i++) {
+              t.push(l.charCodeAt(i));
+          }
+          l = t;
+          var lzma = LZMA;
+          lzma.decompress(l,
+              function (result, error) {
+                  // %% handle errors
+                  if (error) {
+                      console.log('error decompressing lzma phapl\'s prepopulated cache: ' + error);
+                  }
+                  var ll = JSON.parse(result);
+                  for (var i in ll) {
+                      phapl_cached_solutions[ll[i][0] ] = [ ll[i][1], ll[i][2] ];
+                  }
+              },
+              function (percent) {});
+      }
+
+      function phapl_show_results(h) {
+          document.getElementById('thediv').innerHTML = h[0];
+          console.log('html ok');
+          eval(h[1]);
+          console.log('canvas ok');
+          MathJax.Hub.Queue(["Typeset", MathJax.Hub, document.getElementById('thediv')]);
+          console.log(new Date().getTime() - phapl_start);
+      }
+
+      function phapl_do() {
+          document.getElementById('thediv').innerHTML = '[[Запускается PyPy.js, это может занять минуту... | PyPy.js is starting. It may take a minute...]]';
+          phapl_start = new Date().getTime();
+          var dot_x = document.getElementById('dot_x').value;
+          var dot_y = document.getElementById('dot_y').value;
+          var t = '"' + dot_x + '", "' + dot_y + '"';
+          if (t in phapl_cached_solutions) {
+              phapl_show_results(phapl_cached_solutions[t]);
+          } else {
+              pypyjs.stdout = pypyjs.stderr = console.log;
+              pypyjs.ready().then(function() {
+                  document.getElementById('thediv').innerHTML = '[[PyPy.js запущен успешно. Идут вычисления... | PyPy.js started successfully. Calculations are happening...]]';
+                  return pypyjs.set('dot_x', dot_x);
+              }).then(function() {
+                  return pypyjs.set('dot_y', dot_y);
+              }).then(function() {
+                  return pypyjs.exec(
+                      'import traceback\n' +
+                      'try:\n' +
+                      '    import libphapl\n' +
+                      '    r = libphapl.task_to_html(str(dot_x), str(dot_y))\n' +
+                      'except:\n' +
+                      '    r = [ u"\\x3cpre\\x3e" + traceback.format_exc() + "\\x3c/pre\\x3e", "" ]\n'
+                  );
+              }).then(function () {
+                  console.log('python part ok');
+                  return pypyjs.get('r');
+              }).then(function (h) {
+                  h[0] = langtr_replace(h[0]);
+                  h[1] = langtr_replace(h[1]);
+                  phapl_cached_solutions[t] = h;
+                  phapl_show_results(h);
+              });
+          }
+      }
+
+      function phapl_gen_linear(equilibria_type, start_p) {
+          scroll_to('phapl_div_run');
+          document.getElementById('thediv').innerHTML = '[[Запускается PyPy.js, это может занять минуту... | PyPy.js is starting. It may take a minute...]]';
+          phapl_start = new Date().getTime();
+          pypyjs.stdout = pypyjs.stderr = console.log;
+          pypyjs.ready().then(function() {
+              document.getElementById('thediv').innerHTML = '[[PyPy.js запущен успешно. Идут вычисления... | PyPy.js started successfully. Calculations are happening...]]';
+              return pypyjs.set('equilibria_type', equilibria_type);
+          }).then(function() {
+              return pypyjs.exec(
+                  'import traceback\n' +
+                  'try:\n' +
+                  '    import tg1\n' +
+                  '    r = tg1.gen_linear(str(equilibria_type))\n' +
+                  'except:\n' +
+                  '    r = [ u"\\x3cpre\\x3e" + traceback.format_exc() + "\\x3c/pre\\x3e" ]\n'
+              );
+          }).then(function () {
+              console.log('gen: python part ok');
+              return pypyjs.get('r');
+          }).then(function (h) {
+              if (h.length == 1) {
+                  document.getElementById('thediv').innerHTML = h[0];
+              } else {
+                  document.getElementById('dot_x').value = h[0];
+                  document.getElementById('dot_y').value = h[1];
+                  phapl_reset_color();
+                  if (start_p) {
+                      phapl_do();
+                  } else {
+                      document.getElementById('thediv').innerHTML = langtr_replace(h[2]);
+                      MathJax.Hub.Queue(["Typeset", MathJax.Hub, document.getElementById('thediv')]);
+                  }
+                  console.log(new Date().getTime() - phapl_start);
+              }
+              scroll_to('phapl_div_run');
+          });
+      }
+
+      function collapse(id) {
+          var e = document.getElementById(id);
+          var t = e.style.display;
+          if (t != 'none') {
+              t = 'none';
+          } else {
+              t = 'block';
+          }
+          e.style.display = t;
+          e = document.getElementById(id + '-header');
+          t = e.value.split(': ');
+          if (t[0].match('[[Показать | Show]]')) {
+              t = '\u25bc [[Скрыть задачи | Hide tasks]]: ' + t[1];
+          } else {
+              t = '\u25ba [[Показать задачи | Show tasks]]: ' + t[1];
+          }
+          e.value = t;
+      }
+
+      phapl_colored_td = null;
+
+      function phapl_set(obj, dotx, doty) {
+          if (phapl_colored_td) {
+              phapl_colored_td.style.backgroundColor = null;
+          }
+          obj.style.backgroundColor = 'lightgreen';
+          document.getElementById('dot_x').value = dotx;
+          document.getElementById('dot_y').value = doty;
+          phapl_colored_td = obj;
+          scroll_to('phapl_div_run');
+          phapl_do();
+      }
+
+      function phapl_reset_color() {
+          if (phapl_colored_td) {
+              phapl_colored_td.style.backgroundColor = null;
+          }
+      }
+
+      $js_common
+
+      phapl_populate_cache('$compressed_cache_base64');
+
+    </script>
+
+  </head>
+
+  <body>
+
+    <div class="container">
+      Language / язык: [[<a href="phapl.en.html">English</a> | <b>English</b>]], [[<b>Русский</b> | <a href="phapl.ru.html">Русский</a>]].
+    </div>
+    <div class="container">
+      <h2>PhaPl</h2>
+      <p>[[PhaPl - программное обеспечение для автоматического построения и исследования фазовых портретов автономных динамических систем на плоскости. PhaPl работает как сайт или как локальная html-страница, не требующая подключения к сети Интернет. | PhaPl is a software to research and plot phase portraits of autonomous systems of 2 differential equations on a plane. PhaPl works as a site or as a local html-page that works offline.]]</p>
+      <p><a href="#" onclick="scroll_to('phapl_div_choose'); return false">[[Перейти к выбору/вводу задачи ниже. | Go to task input/choice below.]]</a></p>
+      <p><a href="https://github.com/phapl/phapl.github.io/archive/master.zip">[[Скачать архив для локального использования | Download archive for local offline use]]</a> [[(~9 МБ для скачивания, ~37 МБ на диске после распаковки) | (~9 MB to download, ~37 MB to be stored unpacked on disk)]].</p>
+      <p>[[Дата публикации этой версии | This version was published on]]: $date.</p>
+      <p>[["Math Processing Error" везде означает проблему с кешем. Обновление страницы в обход кеша должно помочь (Shift-F5 в Chrome'е, Control-F5 в Firefox'е). | "Math Processing Error" everywhere should be a problem with cache. Refreshing of page bypassing cache should help (press Shift-F5 in Chrome or Control-F5 in Firefox).]]</p>
+      <p>[[Об ошибках, недостатках и возможностях улучшения можно сообщить через | You are welcome to send your suggestions and reports about errors / bugs / problems through]] <a href="https://github.com/phapl/phapl.github.io/issues">GitHub</a>.</p>
+      <p>[[PhaPl использует модифицированные SymPy, PyPy.js, MathJax, LZMA-JS. Полная информация об этом есть в <a href="https://github.com/phapl/phapl">репозитории с исходным кодом PhaPl</a>. | PhaPl uses modified SymPy, PyPy.js, MathJax, LZMA-JS. There is full info about that in <a href="https://github.com/phapl/phapl">the repo with the sources of PhaPl</a>.]]</p>
+      <!-- %% pull license info from the sets -->
+      <p>[[PhaPl хочет быть свободным программным обеспечением, однако эта страница может включать наборы задач, ограничивающие возможность её распространения. | PhaPl wants to be Free Software, but this page can include sets of tasks that prohibit redistribution.]]</p>
+    </div>
+    <div class="container" id="phapl_div_choose">
+      <h2>[[Выбор задачи | Choose task]]</h2>
+      $task_containers
+      <div>
+        <form>
+          <input type="button" id="block_gen_linear-header" onclick="collapse('block_gen_linear')" value="&#9658; [[Показать задачи | Show tasks]]: [[Случайная линейная система по типу особой точки | Random linear system by type of equilibria]]">
+          <div id="block_gen_linear" style="display: none">
+
+            <!-- %% move into code generator -->
+<a href="#" onclick="phapl_gen_linear('1', true); return false">[[Неустойчивый узел | Unstable node]]</a><br>
+<a href="#" onclick="phapl_gen_linear('2', true); return false">[[Устойчивый узел | Stable node]]</a><br>
+<a href="#" onclick="phapl_gen_linear('3', true); return false">[[Седло | Saddle]]</a><br>
+<a href="#" onclick="phapl_gen_linear('4', true); return false">[[Центр | Centre]]</a><br>
+<a href="#" onclick="phapl_gen_linear('5', true); return false">[[Неустойчивый фокус | Unstable focus]]</a><br>
+<a href="#" onclick="phapl_gen_linear('6', true); return false">[[Устойчивый фокус | Stable focus]]</a><br>
+<a href="#" onclick="phapl_gen_linear('7', true); return false">[[Неустойчивый вырожденный узел | Unstable degenerate node]]</a><br>
+<a href="#" onclick="phapl_gen_linear('7a', true); return false">[[Неустойчивый дикритический узел | Unstable dicritical node]]</a><br>
+<a href="#" onclick="phapl_gen_linear('8', true); return false">[[Устойчивый вырожденный узел | Stable degenerate node]]</a><br>
+<a href="#" onclick="phapl_gen_linear('8a', true); return false">[[Устойчивый дикритический узел | Stable dicritical node]]</a><br>
+
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="container" id="phapl_div_run">
+      <h2>[[Ввод/изменение задачи и запуск | Input/modify task and start]]</h2>
+      <form action="#">
+        &#x1E8B; = <input type="text" id="dot_x" onchange="phapl_reset_color()" value=""><br>
+        &#x1E8F; = <input type="text" id="dot_y" onchange="phapl_reset_color()" value=""><br>
+        <input type="button" value="[[Исследовать и построить! | Research and plot!]]" onclick="phapl_do()">
+      </form>
+    </div>
+
+    <div id="thediv">
+    </div>
+    <br><br><br><br><br><br>
+    <a href="#" onclick="scroll_to('phapl_div_choose'); return false">[[Вернуться к выбору/вводу задачи | Get back to input/choice of task]]</a>
+    <br><br><br><br>
+  </body>
+</html>
